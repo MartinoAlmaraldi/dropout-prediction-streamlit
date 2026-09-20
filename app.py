@@ -17,9 +17,50 @@ yes_no_map = {"Ya": 1, "Tidak": 0}
 gender_map = {"Laki-laki": 1, "Perempuan": 0}
 daytime_map = {"Kelas Pagi/Siang (Daytime)": 1, "Kelas Malam (Evening)": 0}
 
+application_mode_map = {
+    "1st phase - general contingent": 1,
+    "Ordinance No. 612/93": 2,
+    "1st phase - special contingent (Azores Island)": 5,
+    "Holders of other higher courses": 7,
+    "Ordinance No. 854-B/99": 10,
+    "International student (bachelor)": 15,
+    "1st phase - special contingent (Madeira Island)": 16,
+    "2nd phase - general contingent": 17,
+    "3rd phase - general contingent": 18,
+    "Ordinance No. 533-A/99, item b2) (Different Plan)": 26,
+    "Ordinance No. 533-A/99, item b3 (Other Institution)": 27,
+    "Over 23 years old": 39,
+    "Transfer": 42,
+    "Change of course": 43,
+    "Technological specialization diploma holders": 44,
+    "Change of institution/course": 51,
+    "Short cycle diploma holders": 53,
+    "Change of institution/course (International)": 57,
+}
+
+course_map = {
+    "Biofuel Production Technologies": 33,
+    "Animation and Multimedia Design": 171,
+    "Social Service (evening attendance)": 8014,
+    "Agronomy": 9003,
+    "Communication Design": 9070,
+    "Veterinary Nursing": 9085,
+    "Informatics Engineering": 9119,
+    "Equinculture": 9130,
+    "Management": 9147,
+    "Social Service": 9238,
+    "Tourism": 9254,
+    "Nursing": 9500,
+    "Oral Hygiene": 9556,
+    "Advertising and Marketing Management": 9670,
+    "Journalism and Communication": 9773,
+    "Basic Education": 9853,
+    "Management (evening attendance)": 9991,
+}
+
 marital_label = st.selectbox("Status Pernikahan", list(marital_map.keys()))
-application_mode = st.number_input("Application Mode (kode resmi dataset)", min_value=1, max_value=60, value=17)
-course = st.number_input("Kode Course (kode resmi dataset)", min_value=1, max_value=10000, value=171)
+application_mode_label = st.selectbox("Jalur Pendaftaran (Application Mode)", list(application_mode_map.keys()))
+course_label = st.selectbox("Program Studi (Course)", list(course_map.keys()))
 daytime_label = st.selectbox("Jenis Kelas", list(daytime_map.keys()))
 prev_qual_grade = st.number_input("Nilai Kualifikasi Sebelumnya", min_value=0.0, max_value=200.0, value=122.0)
 admission_grade = st.number_input("Nilai Masuk (Admission Grade)", min_value=0.0, max_value=200.0, value=127.3)
@@ -60,9 +101,9 @@ prev_qual = 1
 application_order = 1
 
 if st.button("Prediksi Status"):
-    # Mapping input teks deskriptif kembali ke kode numerik sebelum dikirim ke model
     input_data = pd.DataFrame([[
-        marital_map[marital_label], application_mode, application_order, course, daytime_map[daytime_label],
+        marital_map[marital_label], application_mode_map[application_mode_label], application_order,
+        course_map[course_label], daytime_map[daytime_label],
         prev_qual, prev_qual_grade, nacionality, mothers_qual, fathers_qual,
         mothers_occ, fathers_occ, admission_grade, yes_no_map[displaced_label], yes_no_map[special_needs_label],
         yes_no_map[debtor_label], yes_no_map[tuition_ok_label], gender_map[gender_label], yes_no_map[scholarship_label],
