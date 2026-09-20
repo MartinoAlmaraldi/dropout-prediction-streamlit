@@ -3,30 +3,34 @@ import pandas as pd
 import numpy as np
 import joblib
 
-# Memuat model, scaler, dan label encoder yang sudah dilatih sebelumnya di notebook
 model = joblib.load('model.joblib')
 scaler = joblib.load('scaler.joblib')
-label_encoder = joblib.load('label_encoder.joblib')
 
 st.title("Prediksi Status Mahasiswa - Jaya Jaya Institut")
-st.write("Aplikasi ini memprediksi apakah seorang mahasiswa berpotensi Dropout, Enrolled, atau Graduate berdasarkan data akademik dan sosio-ekonominya.")
+st.write("Aplikasi ini memprediksi apakah seorang mahasiswa berpotensi Dropout atau Graduate berdasarkan data akademik dan sosio-ekonominya.")
 
 st.header("Masukkan Data Mahasiswa")
 
-marital_status = st.selectbox("Status Pernikahan (1=Single,2=Married,3=Widower,4=Divorced,5=Facto Union,6=Legally Separated)", [1,2,3,4,5,6])
-application_mode = st.number_input("Application Mode", min_value=1, max_value=60, value=17)
-course = st.number_input("Kode Course", min_value=1, max_value=10000, value=171)
-daytime = st.selectbox("Kelas (1=Daytime, 0=Evening)", [1, 0])
+# Mapping teks deskriptif ke kode numerik yang dipakai model (dilakukan internal, tidak terlihat pengguna)
+marital_map = {"Single": 1, "Married": 2, "Widower": 3, "Divorced": 4, "Facto Union": 5, "Legally Separated": 6}
+yes_no_map = {"Ya": 1, "Tidak": 0}
+gender_map = {"Laki-laki": 1, "Perempuan": 0}
+daytime_map = {"Kelas Pagi/Siang (Daytime)": 1, "Kelas Malam (Evening)": 0}
+
+marital_label = st.selectbox("Status Pernikahan", list(marital_map.keys()))
+application_mode = st.number_input("Application Mode (kode resmi dataset)", min_value=1, max_value=60, value=17)
+course = st.number_input("Kode Course (kode resmi dataset)", min_value=1, max_value=10000, value=171)
+daytime_label = st.selectbox("Jenis Kelas", list(daytime_map.keys()))
 prev_qual_grade = st.number_input("Nilai Kualifikasi Sebelumnya", min_value=0.0, max_value=200.0, value=122.0)
 admission_grade = st.number_input("Nilai Masuk (Admission Grade)", min_value=0.0, max_value=200.0, value=127.3)
-displaced = st.selectbox("Displaced (1=Ya, 0=Tidak)", [1, 0])
-special_needs = st.selectbox("Kebutuhan Khusus Pendidikan (1=Ya, 0=Tidak)", [0, 1])
-debtor = st.selectbox("Memiliki Tunggakan (1=Ya, 0=Tidak)", [0, 1])
-tuition_ok = st.selectbox("UKT Terbayar Tepat Waktu (1=Ya, 0=Tidak)", [1, 0])
-gender = st.selectbox("Gender (1=Laki-laki, 0=Perempuan)", [1, 0])
-scholarship = st.selectbox("Penerima Beasiswa (1=Ya, 0=Tidak)", [0, 1])
+displaced_label = st.selectbox("Mahasiswa Displaced (pindah tempat tinggal untuk kuliah)", list(yes_no_map.keys()))
+special_needs_label = st.selectbox("Kebutuhan Khusus Pendidikan", list(yes_no_map.keys()), index=1)
+debtor_label = st.selectbox("Memiliki Tunggakan", list(yes_no_map.keys()), index=1)
+tuition_ok_label = st.selectbox("UKT Terbayar Tepat Waktu", list(yes_no_map.keys()))
+gender_label = st.selectbox("Gender", list(gender_map.keys()))
+scholarship_label = st.selectbox("Penerima Beasiswa", list(yes_no_map.keys()), index=1)
 age = st.number_input("Usia saat Mendaftar", min_value=15, max_value=70, value=20)
-international = st.selectbox("Mahasiswa Internasional (1=Ya, 0=Tidak)", [0, 1])
+international_label = st.selectbox("Mahasiswa Internasional", list(yes_no_map.keys()), index=1)
 
 st.subheader("Nilai Akademik Semester 1 & 2")
 sem1_credited = st.number_input("SKS Diakui Semester 1", min_value=0, value=0)
@@ -56,11 +60,13 @@ prev_qual = 1
 application_order = 1
 
 if st.button("Prediksi Status"):
+    # Mapping input teks deskriptif kembali ke kode numerik sebelum dikirim ke model
     input_data = pd.DataFrame([[
-        marital_status, application_mode, application_order, course, daytime,
+        marital_map[marital_label], application_mode, application_order, course, daytime_map[daytime_label],
         prev_qual, prev_qual_grade, nacionality, mothers_qual, fathers_qual,
-        mothers_occ, fathers_occ, admission_grade, displaced, special_needs,
-        debtor, tuition_ok, gender, scholarship, age, international,
+        mothers_occ, fathers_occ, admission_grade, yes_no_map[displaced_label], yes_no_map[special_needs_label],
+        yes_no_map[debtor_label], yes_no_map[tuition_ok_label], gender_map[gender_label], yes_no_map[scholarship_label],
+        age, yes_no_map[international_label],
         sem1_credited, sem1_enrolled, sem1_eval, sem1_approved, sem1_grade, sem1_no_eval,
         sem2_credited, sem2_enrolled, sem2_eval, sem2_approved, sem2_grade, sem2_no_eval,
         unemployment, inflation, gdp
@@ -78,11 +84,19 @@ if st.button("Prediksi Status"):
     ])
 
     input_scaled = scaler.transform(input_data)
-    prediction = model.predict(input_scaled)
-    prediction_label = label_encoder.inverse_transform(prediction)[0]
-    proba = model.predict_proba(input_scaled)[0]
+    dropout_proba = model.predict_proba(input_scaled)[0][1]
+    graduate_proba = 1 - dropout_proba
+
+    if dropout_proba >= 0.7:
+        risk_level = "High"
+    elif dropout_proba >= 0.4:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+    prediction_label = "Dropout" if dropout_proba >= 0.5 else "Graduate"
 
     st.success(f"Prediksi Status: **{prediction_label}**")
-    st.write("Probabilitas tiap kelas:")
-    for cls, p in zip(label_encoder.classes_, proba):
-        st.write(f"- {cls}: {p:.2%}")
+    st.write(f"Graduate Probability: **{graduate_proba:.2%}**")
+    st.write(f"Dropout Probability: **{dropout_proba:.2%}**")
+    st.write(f"Risk Level: **{risk_level}**")
